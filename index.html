@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -148,6 +148,7 @@ footer{text-align:center;padding:13px;font-size:.73rem;color:#bbb}
   <div class="msgc" id="loading"><div class="ic">&#x23F3;</div>Cargando...</div>
   <table id="tbl" style="display:none">
     <thead><tr>
+      <th id="thNum" style="text-align:center;display:none">#</th>
       <th>N&deg; Material</th>
       <th style="text-align:center">Stock</th>
       <th style="text-align:center">UMB</th>
@@ -355,6 +356,10 @@ function renderPag(q){
   var lmwrap=document.getElementById('lmwrap');
   if(filtrados.length===0){tbl.style.display='none';noRes.style.display='block';sinfo.style.display='none';lmwrap.style.display='none';return;}
   noRes.style.display='none';tbl.style.display='';
+  var fActual=document.querySelector('input[name=fil]:checked').value;
+  var colSel=document.getElementById('ubicFiltro').value;
+  var numerar=(fActual==='ubic'&&colSel);
+  document.getElementById('thNum').style.display=numerar?'':'none';
   var desde=pag*PAGE,hasta=Math.min(desde+PAGE,filtrados.length);
   var slice=filtrados.slice(desde,hasta);
   sinfo.style.display='block';
@@ -374,6 +379,7 @@ function renderPag(q){
     var opts='<option value="">-</option>';
     for(var u=0;u<UBICACIONES.length;u++){opts+='<option value="'+UBICACIONES[u]+'"'+(UBICACIONES[u]===ubic?' selected':'')+'>'+UBICACIONES[u]+'</option>';}
     html+='<tr'+(m.esNuevo?' class="nuevo-row"':'')+'>'
+      +(numerar?'<td class="tnum" style="text-align:center;color:#1a5276;font-weight:600">'+(desde+i+1)+'</td>':'')
       +'<td class="tnro">'+hl(m.nro,q)+'</td>'
       +'<td class="tstock">'+m.stock.toLocaleString('es-AR')+'</td>'
       +'<td class="tumb">'+esc(m.umb)+'</td>'
