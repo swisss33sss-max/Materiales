@@ -236,7 +236,7 @@ var REPO='',TOKEN='',DB_PATH='db.json',BRANCH='main',dbSHA='';
 var db=null,saveTimer=null,SAVE_DELAY=1800;
 var CFG_KEY='gh_mat_v2';
 
-function apiHdr(){return{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};}
+function apiHdr(){return{'Authorization':'Bearer '+TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};}
 
 function guardarConfig(){
   TOKEN=document.getElementById('cfgToken').value.trim();
