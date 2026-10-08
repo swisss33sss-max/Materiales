@@ -236,7 +236,7 @@ var REPO='',TOKEN='',DB_PATH='db.json',BRANCH='main',dbSHA='';
 var db=null,saveTimer=null,SAVE_DELAY=1800;
 var CFG_KEY='gh_mat_v2';
 
-function apiHdr(){return{'Authorization':'Bearer '+TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};}
+function apiHdr(){return{'Authorization':'token '+TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'};}
 
 function guardarConfig(){
   TOKEN=document.getElementById('cfgToken').value.trim();
@@ -260,8 +260,31 @@ function toggleCfg(){var p=document.getElementById('cfgBar');p.style.display=p.s
 
 function cargarDB(){
   setSS('busy','Cargando...');
-  fetch('https://api.github.com/repos/'+REPO+'/contents/'+DB_PATH+'?ref='+BRANCH+'&t='+Date.now(),{headers:apiHdr()})
-    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+  // ---- LOGS DIAGNOSTICO ----
+  console.log('%c[DIAG] Iniciando cargarDB','color:#1a5276;font-weight:bold');
+  console.log('[DIAG] REPO =', JSON.stringify(REPO));
+  console.log('[DIAG] BRANCH =', JSON.stringify(BRANCH));
+  console.log('[DIAG] Token: largo =', TOKEN.length,
+    '| prefijo =', TOKEN.slice(0,4),
+    '| ultimos4 =', TOKEN.slice(-4),
+    '| tiene espacios/saltos =', /\s/.test(TOKEN));
+  console.log('[DIAG] Header Authorization =', apiHdr().Authorization.slice(0,12)+'...');
+  var url='https://api.github.com/repos/'+REPO+'/contents/'+DB_PATH+'?ref='+BRANCH+'&t='+Date.now();
+  console.log('[DIAG] URL =', url);
+  fetch(url,{headers:apiHdr()})
+    .then(function(r){
+      console.log('[DIAG] Respuesta status =', r.status, r.statusText);
+      console.log('[DIAG] X-GitHub rate-limit remaining =', r.headers.get('x-ratelimit-remaining'));
+      if(!r.ok){
+        return r.json().then(function(err){
+          console.error('[DIAG] GitHub dice:', err.message);
+          console.error('[DIAG] Documentacion:', err.documentation_url);
+          console.error('[DIAG] Cuerpo completo:', err);
+          throw new Error('HTTP '+r.status+' - '+(err.message||''));
+        });
+      }
+      return r.json();
+    })
     .then(function(data){
       dbSHA=data.sha;
       var raw=atob(data.content.replace(/\n/g,''));
@@ -273,10 +296,12 @@ function cargarDB(){
       if(!db.nuevos)db.nuevos=[];
       iniciarApp();
       setSS('ok','Sincronizado');
+      console.log('%c[DIAG] OK - db.json cargado y parseado','color:#1e8449;font-weight:bold');
       document.getElementById('lastSync').textContent='Sincronizado '+hora();
     })
     .catch(function(e){
       setSS('err','Error');
+      console.error('%c[DIAG] FALLO:','color:#e74c3c;font-weight:bold', e.message);
       toast('No se pudo cargar db.json: '+e.message,1);
       document.getElementById('loading').innerHTML='<div class="ic">&#x26A0;&#xFE0F;</div>Verifica token y repo.';
     });
