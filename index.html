@@ -31,6 +31,10 @@ header h1{font-size:1.15rem;font-weight:600;flex:1}
 .ftog input[type=radio]{display:none}
 .ftog input:checked+label{background:#1a5276;color:#fff}
 .cnt{font-size:.78rem;color:#777;white-space:nowrap}
+.tb-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%}
+.tb-filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:1}
+.tb-acciones{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-left:auto}
+#ubicFiltro{padding:6px 8px;border:1px solid #c5cae9;border-radius:6px;font-size:.82rem;outline:none;background:#fff;cursor:pointer}
 .btn{padding:6px 13px;border:none;border-radius:6px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:5px;color:#fff;white-space:nowrap}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn-nuevo{background:#2471a3}.btn-nuevo:hover:not(:disabled){background:#1a5276}
@@ -114,22 +118,30 @@ footer{text-align:center;padding:13px;font-size:.73rem;color:#bbb}
 </div>
 
 <div class="toolbar">
-  <div class="sw">
-    <input type="text" id="busq" placeholder="Buscar por numero, descripcion o ubicacion..." autocomplete="off">
-    <button class="xb" onclick="clearSearch()">&#x2715;</button>
+  <div class="tb-row">
+    <div class="tb-filtros">
+      <div class="sw">
+        <input type="text" id="busq" placeholder="Buscar por numero, descripcion o ubicacion..." autocomplete="off">
+        <button class="xb" onclick="clearSearch()">&#x2715;</button>
+      </div>
+      <div class="ftog">
+        <input type="radio" name="fil" id="f-todos" value="todos" checked><label for="f-todos">Todos</label>
+        <input type="radio" name="fil" id="f-stock" value="stock"><label for="f-stock">Con stock</label>
+        <input type="radio" name="fil" id="f-fisico" value="fisico"><label for="f-fisico">Ingresados</label>
+        <input type="radio" name="fil" id="f-ubic" value="ubic"><label for="f-ubic">Con ubicacion</label>
+      </div>
+      <select id="ubicFiltro" onchange="aplicarFiltros()" style="display:none">
+        <option value="">Todas las columnas</option>
+      </select>
+      <span class="cnt" id="cntBadge">&mdash;</span>
+    </div>
+    <div class="tb-acciones">
+      <button class="btn btn-nuevo" onclick="abrirModal()">&#x2795; Nuevo</button>
+      <button class="btn btn-export" id="btnExp" onclick="exportarExcel()">&#x2193; Excel</button>
+      <label class="btn btn-import" title="Importar Excel exportado por esta app">&#x2191; Importar<input type="file" id="fileImport" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)"></label>
+      <button class="btn btn-reset" onclick="resetAll()">&#x21BA; Limpiar</button>
+    </div>
   </div>
-  <div class="ftog">
-    <input type="radio" name="fil" id="f-todos" value="todos" checked><label for="f-todos">Todos</label>
-    <input type="radio" name="fil" id="f-stock" value="stock"><label for="f-stock">Con stock</label>
-    <input type="radio" name="fil" id="f-fisico" value="fisico"><label for="f-fisico">Ingresados</label>
-    <input type="radio" name="fil" id="f-ubic" value="ubic"><label for="f-ubic">Con ubicacion</label>
-  </div>
-  <span class="cnt" id="cntBadge">&mdash;</span>
-  <button class="btn btn-nuevo" onclick="abrirModal()">&#x2795; Nuevo</button>
-  <button id="mapaBtn" onclick="abrirMapa()">&#x1F4E6; Mapa cajones</button>
-  <button class="btn btn-export" id="btnExp" onclick="exportarExcel()">&#x2193; Excel</button>
-  <label class="btn btn-import" title="Importar Excel exportado por esta app">&#x2191; Importar<input type="file" id="fileImport" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)"></label>
-  <button class="btn btn-reset" onclick="resetAll()">&#x21BA; Limpiar</button>
 </div>
 
 <div class="twrap">
@@ -151,6 +163,20 @@ footer{text-align:center;padding:13px;font-size:.73rem;color:#bbb}
 <div class="sinfo" id="sinfo" style="display:none"></div>
 <div class="lmwrap" id="lmwrap" style="display:none"><button class="btnlm" onclick="cargarMas()">Ver mas resultados</button></div>
 <footer>Taller &middot; <span id="totCount">0</span> materiales &middot; <span id="lastSync">sin sincronizar</span></footer>
+
+<!-- Modal generico (prompt / confirm con estilo) -->
+<div class="ov" id="ovDlg">
+  <div class="modal">
+    <h2 id="dlgTitulo"></h2>
+    <p id="dlgMsg" style="font-size:.85rem;color:#555;margin-bottom:4px"></p>
+    <input type="text" id="dlgInput" style="display:none" autocomplete="off">
+    <div class="merr" id="dlgErr"></div>
+    <div class="mbtns">
+      <button class="bcanc" id="dlgCanc">Cancelar</button>
+      <button class="bconf" id="dlgOk">Aceptar</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal nuevo material -->
 <div class="ov" id="ovNuevo">
@@ -187,7 +213,7 @@ footer{text-align:center;padding:13px;font-size:.73rem;color:#bbb}
 // CAJONES A-H / 1-5
 // ═══════════════════════════════════════
 var COLS=['A','B','C','D','E','F','G','H'];
-var ROWS=[1,2,3,4,5];
+var ROWS=[1,2,3,4,5,6];
 var UBICACIONES=[];
 COLS.forEach(function(c){ROWS.forEach(function(r){UBICACIONES.push(c+r);});});
 
@@ -288,6 +314,9 @@ function iniciarApp(){
   document.getElementById('totCount').textContent=allData.length.toLocaleString('es-AR');
   document.getElementById('loading').style.display='none';
   llenarSelectUbic('mubic','');
+  var uf=document.getElementById('ubicFiltro');
+  uf.innerHTML='<option value="">Todas las columnas</option>';
+  COLS.forEach(function(c){uf.innerHTML+='<option value="'+c+'">Columna '+c+'</option>';});
   aplicarFiltros();
   document.getElementById('busq').addEventListener('input',aplicarFiltros);
   document.querySelectorAll('input[name=fil]').forEach(function(r){r.addEventListener('change',aplicarFiltros);});
@@ -296,10 +325,15 @@ function iniciarApp(){
 function aplicarFiltros(){
   var q=document.getElementById('busq').value.trim().toLowerCase();
   var f=document.querySelector('input[name=fil]:checked').value;
+  var ubicSel=document.getElementById('ubicFiltro');
+  ubicSel.style.display=f==='ubic'?'':'none';
+  if(f!=='ubic')ubicSel.value='';
+  var ubicF=ubicSel.value;
   filtrados=allData.filter(function(m){
     if(f==='stock'&&m.stock<=0)return false;
     if(f==='fisico'&&db.fisicos[m.nro]===undefined)return false;
     if(f==='ubic'&&!db.ubicaciones[m.nro])return false;
+    if(f==='ubic'&&ubicF&&(db.ubicaciones[m.nro]||'').charAt(0)!==ubicF)return false;
     if(q){
       var u=(db.ubicaciones[m.nro]||'').toLowerCase();
       if(!m.nro.toLowerCase().includes(q)&&!m.texto.toLowerCase().includes(q)&&!u.includes(q))return false;
@@ -477,7 +511,7 @@ function importarExcel(input){
         var fis=iFis>=0?row[iFis]:'';
         var ubic=iUbic>=0?String(row[iUbic]||'').trim().toUpperCase():'';
         if(fis!==''&&fis!==null&&!isNaN(parseFloat(fis))){db.fisicos[nro]=parseFloat(fis);cF++;}
-        if(ubic&&/^[A-H][1-5]$/.test(ubic)){db.ubicaciones[nro]=ubic;cU++;}
+        if(ubic&&/^[A-H][1-6]$/.test(ubic)){db.ubicaciones[nro]=ubic;cU++;}
         if(!allData.find(function(m){return m.nro===nro;})){
           var st=iStock>=0?parseFloat(row[iStock])||0:0;
           var um=iUmb>=0?String(row[iUmb]||'UN').trim():'UN';
@@ -500,6 +534,12 @@ function importarExcel(input){
 // EXPORTAR EXCEL
 // ═══════════════════════════════════════
 function exportarExcel(){
+  dlgPrompt('&#x2193; Exportar a Excel','Nombre del archivo (dejar vacio para el automatico):','','Ej: inventario_marzo').then(function(nombreUsr){
+    if(nombreUsr===null)return;
+    hacerExport(nombreUsr.trim());
+  });
+}
+function hacerExport(nombreUsr){
   var btn=document.getElementById('btnExp');
   btn.disabled=true;
   setTimeout(function(){
@@ -521,17 +561,79 @@ function exportarExcel(){
     XLSX.utils.book_append_sheet(wb,ws,'Materiales');
     var hoy=new Date();
     var f=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
-    XLSX.writeFile(wb,'Materiales_'+(lmap[label]||'Todos')+'_'+f+'.xlsx');
+    var nombre;
+    if(nombreUsr){
+      nombre=nombreUsr.replace(/[\\/:*?"<>|]/g,'_');
+      if(!/\.xlsx?$/i.test(nombre))nombre+='.xlsx';
+    }else{
+      nombre='Materiales_'+(lmap[label]||'Todos')+'_'+f+'.xlsx';
+    }
+    XLSX.writeFile(wb,nombre);
     btn.disabled=false;
   },50);
 }
 
 // ═══════════════════════════════════════
+// MODAL GENERICO (prompt / confirm con estilo)
+// ═══════════════════════════════════════
+function dlgBase(opts){
+  return new Promise(function(resolve){
+    var ov=document.getElementById('ovDlg');
+    var titulo=document.getElementById('dlgTitulo');
+    var msg=document.getElementById('dlgMsg');
+    var inp=document.getElementById('dlgInput');
+    var err=document.getElementById('dlgErr');
+    var ok=document.getElementById('dlgOk');
+    var canc=document.getElementById('dlgCanc');
+    titulo.innerHTML=opts.titulo||'';
+    msg.textContent=opts.msg||'';
+    msg.style.display=opts.msg?'block':'none';
+    err.style.display='none';
+    ok.textContent=opts.okText||'Aceptar';
+    if(opts.input){
+      inp.style.display='block';
+      inp.type=opts.password?'password':'text';
+      inp.value=opts.valor||'';
+      inp.placeholder=opts.placeholder||'';
+    }else{inp.style.display='none';}
+    ov.classList.add('open');
+    if(opts.input)setTimeout(function(){inp.focus();inp.select();},80);
+    function cerrar(){
+      ov.classList.remove('open');
+      ok.onclick=null;canc.onclick=null;inp.onkeydown=null;ov.onclick=null;
+    }
+    function aceptar(){
+      var val=opts.input?inp.value:true;
+      if(opts.validar){
+        var e=opts.validar(opts.input?inp.value:'');
+        if(e){err.textContent=e;err.style.display='block';return;}
+      }
+      cerrar();resolve(val);
+    }
+    function cancelar(){cerrar();resolve(opts.input?null:false);}
+    ok.onclick=aceptar;
+    canc.onclick=cancelar;
+    inp.onkeydown=function(ev){if(ev.key==='Enter')aceptar();if(ev.key==='Escape')cancelar();};
+    ov.onclick=function(ev){if(ev.target===ov)cancelar();};
+  });
+}
+function dlgPrompt(titulo,msg,valor,placeholder){return dlgBase({titulo:titulo,msg:msg,input:true,valor:valor,placeholder:placeholder});}
+function dlgConfirm(titulo,msg,okText){return dlgBase({titulo:titulo,msg:msg,okText:okText||'Aceptar'});}
+
+// ═══════════════════════════════════════
 // RESET / HELPERS
 // ═══════════════════════════════════════
 function resetAll(){
-  if(!confirm('Limpiar todas las cantidades fisicas?'))return;
-  db.fisicos={};saveDB();aplicarFiltros();
+  dlgBase({
+    titulo:'&#x21BA; Limpiar cantidades',
+    msg:'Ingresa la contrasena para limpiar todas las cantidades fisicas:',
+    input:true,password:true,placeholder:'Contrasena',okText:'Limpiar',
+    validar:function(v){if(v!=='001')return 'Contrasena incorrecta.';}
+  }).then(function(res){
+    if(res===null)return;
+    db.fisicos={};saveDB();aplicarFiltros();
+    toast('Cantidades fisicas limpiadas');
+  });
 }
 function clearSearch(){document.getElementById('busq').value='';aplicarFiltros();}
 function hl(t,q){
